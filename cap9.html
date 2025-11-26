@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementação: Uma Visão Geral - Hill (2005)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.6s ease-out;
+        }
+        .hidden {
+            display: none;
+        }
+        /* Custom scrollbar for menu */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+    
+    <div id="app">
+    </div>
+
+    <script>
+        // --- Icons SVG ---
+        const ICONS = {
+            chevronLeft: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`,
+            chevronRight: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`,
+            menu: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+            x: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+            target: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+            users: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+            book: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
+            hand: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>`,
+            strategyBoard: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-teal-700"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line><path d="M7 7h.01"></path><path d="M17 7h.01"></path><path d="M7 13h.01"></path><path d="M17 13h.01"></path><path d="M12 7h.01"></path><path d="M12 13h.01"></path><path d="M10 10h4"></path><path d="M10 10l2-2 2 2"></path></svg>`,
+            impactPeople: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-red-200">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                <circle cx="12" cy="6" r="1" fill="currentColor"></circle>
+                <circle cx="8" cy="10" r="1" fill="currentColor"></circle>
+                <circle cx="16" cy="10" r="1" fill="currentColor"></circle>
+                <circle cx="7" cy="15" r="1" fill="currentColor"></circle>
+                <circle cx="12" cy="17" r="1" fill="currentColor"></circle>
+                <circle cx="17" cy="15" r="1" fill="currentColor"></circle>
+            </svg>`
+        };
+
+        // --- Data Slides ---
+        const slides = [
+            // Slide 1: Title (PT-BR)
+            {
+                title: "Implementação: Uma Visão Geral",
+                subtitle: "Hill (2005): Capítulo 9",
+                authors: "Pedro, Lorena & Dario",
+                type: "title",
+            },
+            // Slide 2: The Missing Link (PT-BR)
+            {
+                title: "O Básico do Artigo",
+                subtitle: "O Elo Perdido",
+                type: "custom-diagram",
+                content: {
+                    keyInsight: [
+                        "o que realmente acontece após a tomada de decisão política.",
+                        "a implementação não é uma tarefa administrativa simples, mas um complexo processo de negociação, conflito e adaptação."
+                    ],
+                    leftBox: { text: "Planejamento", icon: ICONS.strategyBoard },
+                    rightBox: { text: "Impacto (na realidade)", icon: ICONS.impactPeople },
+                    centerBox: { text: "Hargrove 1975: o elo perdido - «a implementação»" }
+                },
+            },
+            // Slide 3: Top-Down (PT-BR)
+            {
+                title: "A Perspectiva Top-Down",
+                subtitle: "Um Modelo de Controle Racional",
+                type: "content",
+                sections: [
+                    {
+                        heading: "Lógica Central",
+                        points: [
+                            "Separação estrita: Implementação segue a formulação (Meter & Van Horn, 1975).",
+                            "Hierarquia: Assume que o controle flui do 'topo' (decisores) para a 'base' (implementadores).",
+                        ],
+                    },
+                    {
+                        heading: "Conceitos Chave",
+                        points: [
+                            "<strong>Déficit de Implementação:</strong> Falhas cumulativas por lacunas de cooperação (Pressman & Wildavsky).",
+                            "<strong>Administração Perfeita:</strong> Um ideal teórico para identificar limites de controle (Hood).",
+                        ],
+                    },
+                    {
+                        heading: "Conselho Prescritivo",
+                        note: "Manter a política inequívoca, estruturas simples, controlar atores e prevenir interferências.",
+                    }
+                ],
+            },
+            // Slide 4: Bottom-Up (PT-BR)
+            {
+                title: "O Desafio Bottom-Up",
+                subtitle: "Política como Processo Interativo",
+                type: "content",
+                icon: ICONS.users,
+                sections: [
+                    {
+                        heading: "Natureza da Política",
+                        points: [
+                            "A política não é uma entidade rígida; é complexa, ambígua e muitas vezes simbólica.",
+                            "Não há separação rígida entre formulação e implementação.",
+                        ],
+                    },
+                    {
+                        heading: "Postura Normativa",
+                        points: [
+                            "Crítica: Visão Top-down privilegia decisores centrais e ignora o papel legítimo dos atores da linha de frente.",
+                        ],
+                    },
+                    {
+                        heading: "Abordagens Alternativas",
+                        points: [
+                            "<strong>Backward Mapping (Elmore):</strong> Começar com atores no ponto de entrega e raciocinar para trás.",
+                            "<strong>Network Mapping (Hjern):</strong> Mapear empiricamente redes reais de interação.",
+                        ]
+                    }
+                ],
+            },
+            // Slide 5: Beyond Dichotomy (PT-BR)
+            {
+                title: "Além da Dicotomia",
+                subtitle: "Analisando Regras vs. Discricionariedade",
+                type: "matrix",
+                content: {
+                    matrix: [
+                        {
+                            distribution: "A Tensão Analítica Central",
+                            concentrated: "Tentativas de estruturar e prescrever ações de outros através de estruturas formais.",
+                            fragmented: "Autonomia que os atores exercem dentro da estrutura de regras.",
+                            examples1: "REGRAS",
+                            examples2: "DISCRICIONARIEDADE",
+                            icon1: ICONS.book,
+                            icon2: ICONS.hand
+                        },
+                    ],
+                },
+            },
+            // Slide 6: Key Factors (PT-BR)
+            {
+                title: "Fatores Chave: Estruturas de Regras",
+                subtitle: "Como as regras criam dinâmicas diferentes",
+                type: "players",
+                content: "As políticas variam enormemente em prescritividade — de diretrizes explícitas a estruturas vagas.",
+                items: [
+                    { title: "Poll Tax", desc: "Altamente explícito, inequívoco. Falha devido à resistência pública massiva, não má interpretação." },
+                    { title: "Child Support Act", desc: "Rígido, baseado em fórmulas. Problemas severos levaram a emendas incrementais." },
+                    { title: "GP Fundholding", desc: "Evolutivo, colaborativo. Regras desenvolvidas ao longo do tempo entre governo e gestores de fundos." },
+                    { title: "National Curriculum", desc: "Texto complexo. Combinou diretivas top-down com dependência do julgamento dos professores." },
+                ]
+            },
+            // Slide 7: Admin Systems (ENGLISH)
+            {
+                title: "Administrative Systems",
+                subtitle: "National Context Matters",
+                type: "content",
+                sections: [
+                    {
+                        heading: "United States",
+                        points: [
+                            "Federalism and separation of powers complicate executive action.",
+                            "Persistent gap between central aspirations and local reality (Implementation Deficit)."
+                        ]
+                    },
+                    {
+                        heading: "United Kingdom",
+                        points: [
+                            "Mixture of extreme centralization and ambiguity.",
+                            "Control varies depending on how central the policy is to the government's agenda."
+                        ]
+                    },
+                    {
+                        heading: "Consensual Societies (e.g., Sweden)",
+                        points: [
+                            "Complex, decentralized arrangements built on a culture of trust.",
+                            "Center plays a 'steering' role rather than direct command and control."
+                        ]
+                    }
+                ]
+            },
+            // Slide 8: Conclusion (ENGLISH)
+            {
+                title: "Conclusion",
+                subtitle: "From a Simple Dichotomy to a Theory of Action",
+                type: "conclusion",
+                content: {
+                    mainStatement: "Implementation is not a linear execution of pre-defined goals, but a complex process of negotiation, bargaining, and interaction through which policy is often recreated",
+                    leftBox: {
+                        title: "From Hierarchical Model",
+                        text: "Top-down approach reflects rational model concerned with conformity to authoritatively set goals"
+                    },
+                    rightBox: {
+                        title: "To Realistic Understanding",
+                        text: "Nuanced models recognize pluralist politics, power biases, and institutional constraints continue shaping policy"
+                    },
+                    coreTension: {
+                        title: "The Core Tension (Barrett & Hill)",
+                        quote: "Many implementation problems arise from an inherent tension between the normative assumptions of government—what ought to be done and how it should happen—and the struggle and conflict between interests that represent the reality of the process."
+                    },
+                    keyFactors: ["Rules vs. Discretion", "Policy Frameworks", "Administrative Context"]
+                },
+            },
+            // Slide 9: Closing (PT-BR)
+            {
+                title: "Obrigado",
+                subtitle: "Dúvidas?",
+                type: "closing",
+                institution: "Gestão de Políticas Públicas",
+            },
+        ];
+
+        // --- State ---
+        let currentSlide = 0;
+        let isMenuOpen = false;
+
+        // --- Render Functions ---
+        function renderHeader() {
+            return `
+            <header class="fixed top-0 left-0 right-0 z-40 bg-black/40 backdrop-blur-md border-b border-white/10">
+                <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-purple-500/20">
+                            H9
+                        </div>
+                        <div class="hidden sm:block">
+                            <h1 class="text-lg font-bold text-gray-100">Implementação</h1>
+                            <p class="text-sm text-gray-400">Hill (2005): Cap. 9</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="hidden md:block text-base text-gray-300">
+                            Slide ${currentSlide + 1} de ${slides.length}
+                        </div>
+                        <button onclick="toggleMenu()" class="p-2 hover:bg-white/10 rounded-lg transition text-white">
+                            ${isMenuOpen ? ICONS.x : ICONS.menu}
+                        </button>
+                    </div>
+                </div>
+            </header>
+            `;
+        }
+
+        function renderMenu() {
+            if (!isMenuOpen) return '';
+            const menuItems = slides.map((s, idx) => {
+                const isActive = idx === currentSlide;
+                const classes = isActive 
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" 
+                    : "bg-white/5 hover:bg-white/10 text-gray-300";
+                
+                return `
+                <button key=${idx} onclick="goToSlide(${idx})" class="w-full text-left px-4 py-3 rounded-lg transition ${classes} mb-2 border border-white/5">
+                    <div class="text-sm font-semibold truncate">${s.title}</div>
+                </button>
+                `;
+            }).join('');
+            return `
+            <div class="fixed left-0 top-[73px] bottom-0 w-64 bg-slate-900/95 backdrop-blur-md border-r border-white/10 overflow-y-auto z-30 slide-in">
+                <div class="p-4">
+                    ${menuItems}
+                </div>
+            </div>
+            `;
+        }
+
+        function renderMain() {
+            const slide = slides[currentSlide];
+            let slideContent = '';
+            
+            const headerIcon = slide.icon ? `<div class="flex justify-center mb-6 text-blue-400 opacity-80 animate-pulse">${slide.icon}</div>` : '';
+
+            switch (slide.type) {
+                case 'title':
+                    slideContent = `
+                    <div class="text-center space-y-8 animate-fade-in relative z-10">
+                        <div class="w-32 h-32 mx-auto bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full blur-3xl opacity-20 absolute top-0 left-1/2 -translate-x-1/2 -z-10"></div>
+                        <div class="space-y-4">
+                            <h1 class="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent pb-2">
+                                ${slide.title}
+                            </h1>
+                            <p class="text-2xl md:text-3xl text-gray-300 font-light">${slide.subtitle}</p>
+                        </div>
+                        <div class="pt-12 space-y-4">
+                            <div class="h-px w-24 mx-auto bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                            <p class="text-xl text-gray-400 font-medium">${slide.authors}</p>
+                            <p class="text-sm text-gray-500 uppercase tracking-widest">Novembro 2025</p>
+                        </div>
+                    </div>
+                    `;
+                    break;
+
+                case 'custom-diagram':
+                    const keyInsights = slide.content.keyInsight.map(point => `
+                        <li class="flex gap-2 items-start">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 flex-shrink-0"></span>
+                            <span class="text-lg text-gray-300 leading-relaxed">${point.replace("complexo processo de negociação, conflito e adaptação", "<span class='text-blue-400 font-semibold'>complexo processo de negociação, conflito e adaptação</span>")}</span>
+                        </li>
+                    `).join('');
+
+                    slideContent = `
+                    <div class="space-y-8 animate-fade-in max-w-6xl mx-auto">
+                        <div class="flex flex-col md:flex-row justify-between items-start gap-8">
+                            <div class="space-y-2">
+                                <h2 class="text-4xl md:text-5xl font-bold text-white">${slide.title}</h2>
+                                <p class="text-2xl text-gray-400">${slide.subtitle}</p>
+                            </div>
+                            <ul class="space-y-3 md:max-w-lg">${keyInsights}</ul>
+                        </div>
+
+                        <div class="relative mt-16">
+                            <svg class="absolute inset-0 w-full h-full pointer-events-none" style="min-height: 350px;">
+                                <path d="M 180 280 Q 280 380, 420 320" 
+                                      stroke="#a08968" 
+                                      stroke-width="16" 
+                                      fill="none" 
+                                      stroke-linecap="round"/>
+                                
+                                <path d="M 580 280 L 720 240" 
+                                      stroke="#a08968" 
+                                      stroke-width="14" 
+                                      fill="none" 
+                                      stroke-linecap="round"/>
+                                <path d="M 720 240 L 700 225 M 720 240 L 705 255" 
+                                      stroke="#5a5a5a" 
+                                      stroke-width="8" 
+                                      fill="none" 
+                                      stroke-linecap="round"/>
+                            </svg>
+                            
+                            <div class="relative flex flex-col md:flex-row items-end justify-between gap-12 px-8 py-12" style="min-height: 350px;">
+                                
+                                <div class="flex flex-col items-center gap-6 relative z-10" style="margin-bottom: 40px;">
+                                    <div class="bg-teal-100 border-3 border-teal-900 rounded-xl px-6 py-4 shadow-lg">
+                                        <p class="text-xl font-semibold text-teal-900">${slide.content.leftBox.text}</p>
+                                    </div>
+                                    <div class="w-36 h-36 bg-teal-600 rounded-full flex items-center justify-center shadow-2xl border-4 border-teal-900">
+                                        ${slide.content.leftBox.icon}
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col items-center justify-end relative z-10" style="margin-bottom: 80px;">
+                                    <div class="bg-amber-100 border-2 border-amber-900 border-dashed rounded-sm px-6 py-8 shadow-lg text-center max-w-xs">
+                                        <p class="text-lg font-semibold text-amber-900 italic leading-snug">${slide.content.centerBox.text}</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col items-center gap-6 relative z-10" style="margin-bottom: 40px;">
+                                    <div class="bg-red-200 border-3 border-red-900 rounded-xl px-6 py-4 shadow-lg">
+                                        <p class="text-xl font-semibold text-red-900">${slide.content.rightBox.text}</p>
+                                    </div>
+                                    <div class="w-36 h-36 bg-red-800 rounded-full flex items-center justify-center shadow-2xl border-4 border-red-950">
+                                        ${slide.content.rightBox.icon}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    break;
+                
+                case 'matrix':
+                    const matrixRows = slide.content.matrix.map(row => `
+                        <div class="space-y-8 w-full">
+                            <div class="text-center mb-8">
+                                <h3 class="text-2xl font-semibold text-gray-200">${row.distribution}</h3>
+                                <div class="h-1 w-20 mx-auto mt-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="relative group">
+                                    <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl opacity-30 group-hover:opacity-75 transition duration-500 blur"></div>
+                                    <div class="relative p-6 bg-slate-900 border border-white/10 rounded-xl h-full flex flex-col items-center text-center">
+                                        <div class="mb-4 text-blue-400">${row.icon1 || ''}</div>
+                                        <p class="text-xl font-bold text-blue-300 mb-3 tracking-wide">${row.examples1}</p>
+                                        <p class="text-gray-300 leading-relaxed">${row.concentrated}</p>
+                                    </div>
+                                </div>
+                                <div class="relative group">
+                                    <div class="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl opacity-30 group-hover:opacity-75 transition duration-500 blur"></div>
+                                    <div class="relative p-6 bg-slate-900 border border-white/10 rounded-xl h-full flex flex-col items-center text-center">
+                                        <div class="mb-4 text-purple-400">${row.icon2 || ''}</div>
+                                        <p class="text-xl font-bold text-purple-300 mb-3 tracking-wide">${row.examples2}</p>
+                                        <p class="text-gray-300 leading-relaxed">${row.fragmented}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                    slideContent = `
+                    <div class="space-y-8 animate-fade-in">
+                        <div class="text-center space-y-2 mb-10">
+                            <h2 class="text-4xl md:text-5xl font-bold text-white">${slide.title}</h2>
+                            <p class="text-2xl text-gray-400">${slide.subtitle}</p>
+                        </div>
+                        ${matrixRows}
+                    </div>
+                    `;
+                    break;
+                
+                case 'content':
+                    const sections = slide.sections.map((section, idx) => {
+                        const points = section.points ? section.points.map(point => `
+                            <li class="flex gap-4 items-start group">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 flex-shrink-0 group-hover:bg-purple-400 transition-colors"></span>
+                                <span class="text-lg md:text-xl text-gray-300 leading-relaxed">${point}</span>
+                            </li>
+                        `).join('') : '';
+                        
+                        const note = section.note ? `
+                            <div class="mt-6 p-5 bg-gradient-to-r from-amber-900/20 to-transparent border-l-4 border-amber-500/50 rounded-r-lg">
+                                <p class="text-xl text-amber-200 italic font-medium">"${section.note}"</p>
+                            </div>
+                        ` : '';
+                        
+                        return `
+                            <div class="space-y-4 p-4 rounded-xl hover:bg-white/5 transition duration-300">
+                                <h3 class="text-2xl font-semibold text-blue-400 flex items-center gap-3">
+                                    ${section.heading}
+                                </h3>
+                                ${points ? `<ul class="space-y-3 ml-2">${points}</ul>` : ''}
+                                ${note}
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    slideContent = `
+                    <div class="space-y-6 animate-fade-in max-w-5xl mx-auto">
+                        <div class="text-center space-y-2 mb-8">
+                            ${headerIcon}
+                            <h2 class="text-4xl md:text-5xl font-bold text-white">${slide.title}</h2>
+                            ${slide.subtitle ? `<p class="text-2xl text-gray-400">${slide.subtitle}</p>` : ''}
+                        </div>
+                        <div class="space-y-2 bg-slate-800/30 p-6 rounded-2xl border border-white/5 backdrop-blur-sm">
+                            ${sections}
+                        </div>
+                    </div>
+                    `;
+                    break;
+
+                case 'players':
+                    const gridItems = slide.items ? slide.items.map(item => `
+                        <div class="relative group h-full">
+                            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-xl opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                            <div class="relative p-6 bg-slate-800/50 border border-white/10 rounded-xl hover:border-blue-500/50 transition h-full flex flex-col">
+                                <h4 class="text-xl font-bold text-blue-300 mb-3">${item.title}</h4>
+                                <p class="text-base text-gray-300 leading-snug">${item.desc}</p>
+                            </div>
+                        </div>
+                    `).join('') : '';
+                    
+                    slideContent = `
+                    <div class="space-y-8 animate-fade-in">
+                        <div class="text-center space-y-4 mb-8">
+                            <h2 class="text-4xl md:text-5xl font-bold text-white">${slide.title}</h2>
+                            <p class="text-2xl text-gray-400">${slide.subtitle}</p>
+                            <p class="text-lg text-gray-500 max-w-2xl mx-auto">${slide.content}</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${gridItems}
+                        </div>
+                    </div>
+                    `;
+                    break;
+
+                case 'conclusion':
+                    const keyFactorsBoxes = slide.content.keyFactors.map(factor => `
+                        <div class="px-6 py-3 bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg border border-slate-600 text-center">
+                            <p class="text-base font-semibold text-gray-200">${factor}</p>
+                        </div>
+                    `).join('');
+                    
+                    slideContent = `
+                    <div class="space-y-6 animate-fade-in max-w-6xl mx-auto">
+                        <div class="text-center space-y-2 mb-6">
+                            <h2 class="text-4xl md:text-5xl font-bold text-white">${slide.title}</h2>
+                            <p class="text-xl text-gray-400">${slide.subtitle}</p>
+                        </div>
+                        
+                        <div class="mb-8 p-6 bg-gradient-to-r from-slate-700 to-slate-800 rounded-lg border-2 border-slate-600 shadow-xl">
+                            <p class="text-lg md:text-xl text-white leading-relaxed font-medium text-center">
+                                ${slide.content.mainStatement}
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <div class="p-6 bg-gradient-to-br from-blue-900/30 to-blue-800/20 rounded-lg border-l-4 border-blue-500">
+                                <h3 class="text-xl font-bold text-blue-300 mb-3">${slide.content.leftBox.title}</h3>
+                                <p class="text-base text-gray-300 leading-relaxed">${slide.content.leftBox.text}</p>
+                            </div>
+                            
+                            <div class="p-6 bg-gradient-to-br from-red-900/30 to-red-800/20 rounded-lg border-l-4 border-red-500">
+                                <h3 class="text-xl font-bold text-red-300 mb-3">${slide.content.rightBox.title}</h3>
+                                <p class="text-base text-gray-300 leading-relaxed">${slide.content.rightBox.text}</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6 p-6 bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-lg border-2 border-slate-600">
+                            <h3 class="text-xl font-bold text-gray-200 mb-4">${slide.content.coreTension.title}</h3>
+                            <p class="text-base text-gray-300 leading-relaxed italic border-l-4 border-gray-500 pl-4">
+                                "${slide.content.coreTension.quote}"
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            ${keyFactorsBoxes}
+                        </div>
+                    </div>
+                    `;
+                    break;
+                
+                case 'closing':
+                    slideContent = `
+                    <div class="text-center space-y-12 animate-fade-in flex flex-col justify-center h-[60vh]">
+                        <div class="space-y-6">
+                            <h1 class="text-6xl md:text-8xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                                ${slide.title}
+                            </h1>
+                            <p class="text-3xl text-gray-400 font-light tracking-wide">${slide.subtitle}</p>
+                        </div>
+                        <div class="pt-12">
+                            <div class="inline-block px-8 py-3 rounded-full bg-white/5 border border-white/10 backdrop-blur">
+                                <p class="text-xl font-semibold text-gray-300">${slide.institution}</p>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    break;
+            }
+            return `
+            <main class="pt-24 pb-24 px-4 min-h-screen flex items-center justify-center relative z-0">
+                <div class="w-full max-w-5xl">
+                    ${slideContent}
+                </div>
+            </main>
+            `;
+        }
+
+        function renderFooter() {
+            const progress = ((currentSlide + 1) / slides.length) * 100;
+            return `
+            <footer class="fixed bottom-0 left-0 right-0 bg-black/40 backdrop-blur-md border-t border-white/10 z-40">
+                <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+                    <button onclick="prevSlide()" class="p-2 rounded-lg border border-white/10 hover:bg-white/10 hover:border-white/30 transition text-gray-300">
+                        ${ICONS.chevronLeft}
+                    </button>
+                    
+                    <div class="flex-1 max-w-2xl mx-auto">
+                        <div class="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(168,85,247,0.5)]" 
+                                style="width: ${progress}%">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="nextSlide()" class="p-2 rounded-lg border border-white/10 hover:bg-white/10 hover:border-white/30 transition text-gray-300">
+                        ${ICONS.chevronRight}
+                    </button>
+                </div>
+            </footer>
+            `;
+        }
+
+        function renderApp() {
+            const appEl = document.getElementById('app');
+            if (appEl) {
+                appEl.innerHTML = `
+                    ${renderHeader()}
+                    ${renderMenu()}
+                    ${renderMain()}
+                    ${renderFooter()}
+                `;
+            }
+        }
+
+        // --- Logic ---
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slides.length;
+            renderApp();
+        }
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            renderApp();
+        }
+        function goToSlide(index) {
+            currentSlide = index;
+            isMenuOpen = false;
+            renderApp();
+        }
+        function toggleMenu() {
+            isMenuOpen = !isMenuOpen;
+            renderApp();
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === "ArrowRight" || e.key === " ") {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                prevSlide();
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyPress);
+        document.addEventListener('DOMContentLoaded', renderApp);
+    </script>
+</body>
+</html>
